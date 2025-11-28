@@ -1,0 +1,234 @@
+import { FaExclamationTriangle } from 'react-icons/fa';
+
+# 创建对话请求（Authropic）
+
+## 概述
+OmniMaaS 的 Claude 原生 Chat Completions 接口面向已接入 Claude 生态或计划统一接入多家模型的团队，提供一条与官方接口规格高度一致的接入路径。平台在协议层兼容 POST /v1/messages 等 Claude 官方规范：请求体沿用 model、messages（含多段内容块）、工具调用等字段设计，并支持流式响应与多模态扩展。
+
+## 请求
+
+### 端点
+``` POST
+https://api.openai.com/v1/chat//messages
+```
+
+### 请求体（Request Body）
+
+- **max_tokens** `int`（必填，最小值 ≥ 1）  
+  在模型停止前最多生成的 token 数。模型可能会在达到上限前自然结束；不同模型支持的最大值不同，请参考模型文档。
+
+- **messages** `Iterable[MessageParam]`（必填，最多 100,000 条）  
+  输入对话消息列表。Claude 以「用户 / 助手」交替轮次进行对话：  
+  - 每条消息必须包含 `role` 与 `content` 字段；  
+  - 可只传一条 `user` 消息，也可传多轮 `user` / `assistant` 消息；  
+  - 如果最后一条消息是 `assistant` 角色，则模型输出会直接从该消息内容后继续（可用于强制前缀）；  
+  - **role** `Literal["user", "assistant"]` (必填)  
+    消息角色仅支持：`"user"`、`"assistant"`（系统提示需用顶层 `system` 字段，而不是这里的 `system` 角色）。 
+  - **content** `string | object`   
+    `content` 可以是字符串，等价于单个 `{"type": "text", "text": "..."}` 的内容块数组；具体可参考官方文档。    
+  - **messages示例**  
+
+  ```
+  {"role": "user", "content": "Hello, Claude"}
+  ```
+
+  ```
+  {"role": "user", "content": [{"type": "text", "text": "Hello, Claude"}]}
+  ```
+
+- **model** `ModelParam`（必填）  
+  本次调用使用的模型 ID，例如：`claude-3-7-sonnet-latest` 等；也支持传入字符串形式的自定义/未来模型名。
+
+- **metadata** `MetadataParam`（可选）  
+  描述本次请求的元数据对象，便于你在业务侧做审计、统计、追踪等。
+
+- **user_id** `string`（可选）  
+  终端用户的标识（例如经哈希后的用户 ID），用于安全审计和用量分析。
+
+- **service_tier** `"auto" | "standard_only"`（可选）  
+  控制本次请求使用的服务层级：  
+  - `"auto"`：根据项目配置自动选择（默认）；  
+  - `"standard_only"`：始终使用标准容量，不使用优先容量。
+
+- **stop_sequences** `Sequence[str]`（可选）  
+  自定义停止序列列表。模型生成内容遇到任一序列会立即停止，此时响应的 `stop_reason` 为 `"stop_sequence"`，同时 `stop_sequence` 字段会返回命中的具体序列。
+
+- **stream** `false`（可选）  
+  是否以 Server-Sent Events 形式增量流式返回结果。目前该参数仅支持 `false`，流式模式需使用专门的流式接口/客户端。
+
+- **system** `string | Iterable[TextBlockParam]`（可选）  
+  系统提示词，用于为 Claude 提供统一的角色设定与行为准则（如「你是一名资深 Python 开发助手」等）。可以是简单字符串，也可以是文本块数组。
+
+- **temperature** `float`（可选，默认 `1.0`，范围 `[0.0, 1.0]`）  
+  控制输出的随机性：  
+  - 接近 `0.0`：更稳定、更偏向确定性（适合分析 / 选择题）；  
+  - 接近 `1.0`：更有创意和发散性。  
+  即使温度为 `0.0`，结果也不保证完全确定。
+
+- **thinking** `ThinkingConfigParam`（可选）  
+  启用 Claude 扩展思考能力的配置：  
+  - 启用后，响应中会包含模型思考过程的内容块；  
+  - 需至少预留 1024 个 `max_tokens` 作为思考预算，这部分也计入总 token 消耗；  
+  - 通过 `ThinkingConfigEnabled` / `ThinkingConfigDisabled` 控制。
+
+- **tool_choice** `ToolChoiceParam`（可选）  
+  控制模型如何使用提供的工具：  
+  - `ToolChoiceAuto`：模型自行决定是否使用工具、使用哪个工具； 
+    - **type** `Literal["auto"]`  
+      值只能为`auto`
+    - **disable_parallel_tool_use** `Optional[bool]`  
+      是否禁用并行工具的使用，默认值为false。如果设置为true，则模型最多输出一次工具使用情况。  
+  - `ToolChoiceAny`：模型必须使用某个可用工具，但你不指定哪一个；  
+    - **type** `Literal["any"]`  
+      值只能为`any`  
+    - **disable_parallel_tool_use** `Optional[bool]`  
+      是否禁用并行工具的使用，默认值为false。如果设置为true，则模型最多输出一次工具使用情况。  
+  - `ToolChoiceTool`：强制模型使用某个指定工具；  
+    - **name** `str`  
+      指定的工具名称
+    - **type** `Literal["tool"]`  
+      值只能为`tool`  
+    - **disable_parallel_tool_use** `Optional[bool]`  
+      是否禁用并行工具的使用，默认值为false。如果设置为true，则模型最多输出一次工具使用情况。  
+  - `ToolChoiceNone`：禁止模型调用任何工具。
+    - **type** `Literal["none"]`  
+      值只能为`none`  
+
+- **tools** `Iterable[ToolUnionParam]`（可选）  
+  定义模型可以使用的工具列表（客户端工具或服务端工具）：  
+  - 每个工具包含：`name`（名称）、`description`（推荐提供）、`input_schema`（输入 JSON Schema）；  
+  - 当模型决定调用某个工具时，会在输出中生成 `tool_use` 内容块（包含 `name` 和 `input`）；  
+  - 你在应用侧根据 `tool_use` 中的 `input` 实际调用工具，然后将结果通过 `tool_result` 内容块发回 Claude 完成后续对话。  
+
+- **top_k** `int`（可选，≥ 0）  
+  仅从概率最高的前 K 个 token 中采样，用于截断「长尾」低概率选项。属于高级参数，一般只需调 `temperature` 即可。
+
+- **top_p** `float`（可选，范围 `[0, 1]`）  
+  核采样（nucleus sampling）参数：按照概率从高到低累积，直到达到 `top_p` 为止，只在该集合内采样。建议与 `temperature` 二选一调整。
+
+### 请求示例
+
+Python版本的用户如果本地没有安装过Authropic库，可使用以下命令安装：
+``` bash
+pip install anthropic
+```
+
+<FaExclamationTriangle style={{ color: '#facc15', fontSize: '1em' }} /> 安装Authropic库需将本地Python环境升级到Python3.8以上！
+
+``` python
+from anthropic import Anthropic
+
+client = Anthropic(
+    api_key="my-anthropic-api-key",
+)
+message = client.messages.create(
+    max_tokens=1024,
+    messages=[{
+        "content": "Hello, world",
+        "role": "user",
+    }],
+    model="claude-sonnet-4-5-20250929",
+)
+print(message.id)
+```
+
+### 响应体（Response Body）
+
+- **id** `string`  
+  对象的唯一标识符。ID 的格式和长度可能会随着时间变化。
+
+- **content** `List[ContentBlock]`  
+  模型生成的内容，为一组内容块数组，每个块有一个 `type` 决定结构。  
+  示例：`[{"type": "text", "text": "Hi, I'm Claude."}]`  
+  - 如果请求中最后一条消息是 `assistant` 角色，则响应内容会直接从该消息继续，可用于约束模型输出前缀。  
+  - 内容块可能的类型包括：`TextBlock`、`ThinkingBlock`、`RedactedThinkingBlock`、`ToolUseBlock`、`ServerToolUseBlock`、`WebSearchToolResultBlock` 等。
+
+- **model** `Model`  
+  实际用于完成本次补全的模型 ID，例如 `claude-3-7-sonnet-latest` 等，也可为字符串。
+
+- **role** `"assistant"`  
+  生成消息的会话角色。对于 Claude Messages 响应，该字段始终为 `"assistant"`。
+
+- **stop_reason** `StopReason | null`  
+  本次生成停止的原因，可能值：  
+  - `"end_turn"`：模型到达自然结束点；  
+  - `"max_tokens"`：达到请求的 `max_tokens` 或模型上限；  
+  - `"stop_sequence"`：生成了你提供的某个 `stop_sequences`；  
+  - `"tool_use"`：模型调用了一个或多个工具；  
+  - `"pause_turn"`：长轮次对话被暂停，可将本次响应原样带回下一次请求继续；  
+  - `"refusal"`：流式分类器因疑似策略违规而介入。  
+  在非流式模式下该值一定非空；流式模式中，在 `message_start` 事件里为 `null`，后续事件非空。
+
+- **stop_sequence** `string | null`  
+  如果触发了自定义停止序列，则为实际命中的那条 stop 序列；否则为 `null`。
+
+- **type** `"message"`  
+  对象类型。对于 Messages 响应，该字段始终为 `"message"`。
+
+- **usage** `Usage`  
+  计费与速率限制相关的 token 用量统计。  
+  - 请注意，请求在内部会被转换为模型可接受的格式，再由模型输出并解析，因此 `usage` 中的 token 计数与可见文本不一定一一对应，即使返回空字符串也可能有非零 `output_tokens`。  
+  - 总输入 token 数 = `input_tokens + cache_creation_input_tokens + cache_read_input_tokens`。  
+
+  **usage 结构：**
+  - **cache_creation** `CacheCreation | null`  
+    按 TTL 维度拆分的缓存 token：  
+    - `ephemeral_1h_input_tokens`：1 小时 TTL 缓存中使用的输入 token 数；  
+    - `ephemeral_5m_input_tokens`：5 分钟 TTL 缓存中使用的输入 token 数。  
+  - **cache_creation_input_tokens** `int | null`  
+    用于创建缓存条目的输入 token 数。  
+  - **cache_read_input_tokens** `int | null`  
+    从缓存中读取的输入 token 数。  
+  - **input_tokens** `int`  
+    本次请求中实际使用的输入 token 数。  
+  - **output_tokens** `int`  
+    本次请求中实际生成的输出 token 数。  
+  - **server_tool_use** `ServerToolUsage | null`  
+    服务端工具调用的次数统计。  
+  - **web_search_requests** `int`  
+    Web 搜索工具请求次数。  
+  - **service_tier** `"standard" | "priority" | "batch" | null`  
+    本次请求实际使用的服务层级：标准 / 优先 / 批处理。
+
+### 响应示例
+``` python
+{
+  "id": "msg_013Zva2CMHLNnXjNJJKqJ2EF",
+  "content": [
+    {
+      "citations": [
+        {
+          "cited_text": "cited_text",
+          "document_index": 0,
+          "document_title": "document_title",
+          "end_char_index": 0,
+          "file_id": "file_id",
+          "start_char_index": 0,
+          "type": "char_location"
+        }
+      ],
+      "text": "Hi! My name is Claude.",
+      "type": "text"
+    }
+  ],
+  "model": "claude-sonnet-4-5-20250929",
+  "role": "assistant",
+  "stop_reason": "end_turn",
+  "stop_sequence": null,
+  "type": "message",
+  "usage": {
+    "cache_creation": {
+      "ephemeral_1h_input_tokens": 0,
+      "ephemeral_5m_input_tokens": 0
+    },
+    "cache_creation_input_tokens": 2051,
+    "cache_read_input_tokens": 2051,
+    "input_tokens": 2095,
+    "output_tokens": 503,
+    "server_tool_use": {
+      "web_search_requests": 0
+    },
+    "service_tier": "standard"
+  }
+}
+```

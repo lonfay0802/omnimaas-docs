@@ -1,0 +1,347 @@
+import { FaExclamationTriangle } from 'react-icons/fa';
+
+# 创建对话请求（Gemini）
+
+## 概述
+OmniMaaS 的 Gemini 原生 Chat Completions 接口面向已经接入 Google Gemini 生态的团队，提供一条与官方接口格式高度一致的迁移路径。平台在协议层兼容 Gemini 官方 `models/{model}:streamGenerateContent / generateContent` 规范：请求体沿用 model、contents（多模态内容块）、tools、toolConfig 等字段设计，并支持流式响应与函数调用
+
+<FaExclamationTriangle style={{ color: '#facc15', fontSize: '1em' }} /> Gemini官方SDK 不支持base_url切换，只能使用REST API的方式调用OmniMaaS的Gemini接口。
+
+## 请求
+
+### 端点
+``` POST
+https://api.openai.com/v1beta/{model=models/*}:generateContent
+```
+
+### 路径参数
+
+通过REST方式调用Gemini原生API，需要将模型名称传入路径参数，以下为具体描述
+
+- **model** `string` (必填)  
+用于生成补全的 Model 的名称，格式：`models/{model}`。
+
+### 请求体（Request Body）
+
+- **contents** `object array` (必填)  
+  与模型当前对话的内容，对于单轮查询，这是单个实例。对于多轮查询（例如聊天），这是包含对话历史记录和最新请求的重复字段。
+  - **role** `string` (可选)  
+    内容的制作方，必须是“user”或“model”。  
+  - **parts** `object array` (必须)  
+    `part`由具有关联数据类型的数据组成。  
+    - **thought** `bool` (可选)   
+      表示相应部分是否由模型生成。  
+    - **thoughtSignature** `string` (可选)  
+      一种不透明的思路签名，以便在后续请求中重复使用;使用 base64 编码的字符串。  
+    - **partMetadata** `object` (可选)   
+      与部件关联的自定义元数据。使用 genai.Part 作为内容表示形式的代理可能需要跟踪其他信息。例如，它可以是 Part 的来源文件/源的名称，也可以是多路复用多个 Part 流的方式。  
+    - **data** `Union type` (必须)   
+        - **text** `string`  
+          内嵌文本。  
+        - **inlineData** `object`    
+            - **mimeType** `string`  
+            来源数据的 IANA 标准 MIME 类型。示例：- image/png- image/jpeg 如果提供的 MIME 类型不受支持，系统会返回错误。  
+            支持哪些类型，可查看官方文档。
+            - **data** `string (bytes format)`   
+            媒体格式的原始字节，使用 base64 编码的字符串。  
+        - **functionCall** `object`  
+            - **name** `string` (必填)  
+            要调用的函数名称，必须是 a-z、A-Z、0-9 或包含下划线和短划线，长度上限为 64。  
+            - **args** `object (Struct format)` (可选)  
+            以 JSON 对象格式表示的函数参数和值。  
+        - **functionResponse** `object`  
+        FunctionCall 的结果输出，其中包含表示 FunctionDeclaration.name 的字符串和包含函数调用的任何输出的结构化 JSON 对象，用作模型的上下文。
+            - **name** `string` (必须)  
+              必需。要调用的函数名称。必须是 a-z、A-Z、0-9 或包含下划线和短划线，长度上限为 64。  
+            - **response** `object (Struct format)` (必须)  
+            以 JSON 对象格式表示的函数响应。调用者可以使用符合函数语法的任意键来返回函数输出，例如“output”“result”等。特别是，如果函数调用未能成功执行，响应可以包含“error”键，以便向模型返回错误详情。 
+        - **fileData** `object`  
+        基于 URI 的数据  
+            - **mimeType** `string` (可选)  
+            来源数据的 IANA 标准 MIME 类型。  
+            - **fileUri** `string` (必须)  
+            URI  
+        - **executableCode** `object`  
+        模型生成的旨在执行的代码。  
+            - **language** `enum` (必须)  
+            code 的编程语言。  
+            - **code** `string` (必须)  
+            code代码  
+        - **codeExecutionResult** `object`  
+        执行 ExecutableCode 的结果。  
+            - **outcome** `enum` (必须)  
+            代码执行结果  
+            - **output** `string` (可选)  
+            如果代码执行成功，则包含 stdout；否则包含 stderr 或其他说明。
+
+
+
+        
+
+    - **tools** `object array` (可选)  
+    仅限输入。不可变。模型可能用于生成下一个回答的 Tools 列表
+    - **toolConfig** `object`  (可选)  
+    请求中指定的任何 Tool 的工具配置。
+        - **functionCallingConfig** `object` (可选)  
+        函数调用配置。
+            - **mode** `string` (可选)    
+            指定函数调用应以何种模式执行。如果未指定，则默认值将设置为 AUTO。
+            - **allowedFunctionNames** `string array` (可选)  
+            一组函数名称，提供后可限制模型将调用的函数。仅当模式为“ANY”或“VALIDATED”时，才应设置此字段。函数名称应与 [FunctionDeclaration.name] 匹配。设置后，模型将仅根据允许的函数名称预测函数调用。
+        - **retrievalConfig** `object` (可选)  
+        检索配置。
+    - **safetySettings** `object array` (可选)  
+    用于屏蔽不安全内容的唯一 SafetySetting 实例的列表。
+    - **systemInstruction** `object` (可选)  
+    开发者设置了系统指令。目前仅限文本。
+    - **generationConfig** `object` (可选)  
+    模型生成和输出的配置选项。  
+        - **stopSequences** `string array` (可选)  
+        可选。将停止输出生成的字符序列集（最多 5 个）。如果指定了此参数，API 将在首次出现 stop_sequence 时停止。停止序列不会包含在回答中。  
+        - **responseMimeType** `string` (可选)  
+        生成的候选文本的 MIME 类型。支持的 MIME 类型包括：text/plain：（默认）文本输出。  
+        - **responseSchema** `object` (可选)  
+        生成的候选文本的输出结构，可以是对象、基元或数组。如果设置了此字段，还必须设置兼容的 responseMimeType。兼容的 MIME 类型：application/json：JSON 响应的架构。  
+        - **responseModalities** `enum array` (可选)  
+        请求的响应模态。表示模型可以返回且应在响应中预期的模态集合，支持以下模态：  
+        `MODALITY_UNSPECIFIED`	默认值。  
+        `TEXT`	表示模型应返回文本。  
+        `IMAGE`	表示模型应返回图片。  
+        `AUDIO`	表示模型应返回音频。   
+        - **candidateCount** `integer` (可选)  
+        要返回的生成响应的数量。如果未设置，则默认为 1。  
+        - **maxOutputTokens** `integer` (可选)  
+        候选回答中包含的 token 数量上限。  
+        - **temperature** `number` (可选)  
+        控制输出的随机性, 值可介于 [0.0, 2.0] 之间。  
+        - **topP** `number` (可选)  
+        抽样时要考虑的 token 的最大累积概率。  
+        - **topK** `integer` (可选)  
+        抽样时要考虑的令牌数量上限，一般topP和topK只设置一个。  
+        - **seed** `integer` (可选)  
+        解码中使用的种子。如果未设置，请求会使用随机生成的种子。
+        - **presencePenalty** `number` (可选)  
+        如果下一个令牌已在响应中出现，则对该令牌的 logprobs 应用存在惩罚。正值惩罚会阻止使用已在回答中使用的令牌，从而增加词汇量。负惩罚会鼓励使用已在回答中使用的令牌，从而减少词汇量。  
+        - **frequencyPenalty** `number` (可选)   
+        应用于下一个令牌的 logprobs 的频次惩罚，乘以每个令牌在目前为止的响应中出现的次数。
+        - **responseLogprobs** `bool` (可选)  
+        如果为 true，则在响应中导出 logprobs 结果。  
+        - **logprobs** `integer` (可选)  
+        仅在 responseLogprobs=True 时有效。此参数用于设置在 Candidate.logprobs_result 的每个解码步骤中返回的对数概率最高的数量。该数字必须介于 [0, 20] 之间。
+        - **speechConfig** `object` (可选)  
+        语音生成配置。  
+            - **voiceConfig** `object`   
+            单语音输出时的配置。  
+            - **multiSpeakerVoiceConfig** `object`  
+            多音箱设置的配置，它与 voiceConfig 字段互斥。
+            - **languageCode** `string`  
+            用于语音合成的语言代码（采用 BCP 47 格式，例如“en-US”）。有效值包括：de-DE、en-AU、en-GB、en-IN、en-US、es-US、fr-FR、hi-IN、pt-BR、ar-XA、es-ES、fr-CA、id-ID、it-IT、ja-JP、tr-TR、vi-VN、bn-IN、gu-IN、kn-IN、ml-IN、mr-IN、ta-IN、te-IN、nl-NL、ko-KR、cmn-CN、pl-PL、ru-RU 和 th-TH。
+        - **thinkingConfig** `object` (可选)  
+        思考功能的配置。如果为不支持思考的模型设置此字段，系统将返回错误。
+            - **includeThoughts** `bool`  
+            指示是否在回答中包含想法。如果为 true，则仅在有想法时返回想法。
+            - **thinkingBudget** `integer`  
+            模型应生成的想法 token 的数量。  
+            - **thinkingLevel** `enum`  
+            控制模型在生成回答之前的内部推理过程的最大深度。如果未指定，则默认值为 HIGH。
+        - **imageConfig** `object` (可选)  
+        图片生成配置。如果为不支持这些配置选项的模型设置此字段，系统将返回错误。
+            - **aspectRatio** `string`  
+            要生成的图片的宽高比。支持的宽高比：1:1、2:3、3:2、3:4、4:3、9:16、16:9、21:9。如果未指定，模型将根据提供的任何参考图片选择默认宽高比。
+            - **imageSize** `string`  
+            指定生成的图片的大小。支持的值为 1K、2K、4K。如果未指定，模型将使用默认值 1K。
+        - **mediaResolution** `enum` (可选)  
+        输入媒体的媒体分辨率。  
+        `MEDIA_RESOLUTION_UNSPECIFIED`	媒体分辨率尚未设置。
+        `MEDIA_RESOLUTION_LOW`	媒体分辨率设置为低（64 个 token）。
+        `MEDIA_RESOLUTION_MEDIUM`	媒体分辨率设置为中等（256 个 token）。
+        `MEDIA_RESOLUTION_HIGH`	媒体分辨率设置为高（缩放重构，256 个 token）。
+    - **cachedContent** `string` (可选)
+    用作提供预测的上下文的缓存内容的名称。格式：`cachedContents/{cachedContent}`
+
+### 请求示例
+
+``` shell
+curl "https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=$GEMINI_API_KEY" \
+    -H 'Content-Type: application/json' \
+    -X POST \
+    -d '{
+      "contents": [{
+        "parts":[{"text": "Write a story about a magic backpack."}]
+        }]
+       }' 2> /dev/null
+```
+
+### 响应体 （Response Body）
+
+- **candidates** `object array`  
+  模型生成的候选回答列表。每个候选包含生成的内容、完成原因等信息。
+    - **content** `Content`（仅输出）  
+    模型返回的生成内容。
+        - **role** `string` (可选)  
+        内容的制作方，必须是“user”或“model”。  
+        - **parts** `object array` (必须)  
+        `part`由具有关联数据类型的数据组成。 
+            - **thought** `bool` (可选)   
+            表示相应部分是否由模型生成。  
+            - **thoughtSignature** `string` (可选)  
+            一种不透明的思路签名，以便在后续请求中重复使用;使用 base64 编码的字符串。  
+            - **partMetadata** `object` (可选)   
+            与部件关联的自定义元数据。使用 genai.Part 作为内容表示形式的代理可能需要跟踪其他信息。例如，它可以是 Part 的来源文件/源的名称，也可以是多路复用多个 Part 流的方式。  
+            - **data** `Union type` (必须)   
+                - **text** `string`  
+                内嵌文本。  
+                - **inlineData** `object`    
+                    - **mimeType** `string`  
+                    来源数据的 IANA 标准 MIME 类型。示例：- image/png- image/jpeg 如果提供的 MIME 类型不受支持，系统会返回错误。  
+                    支持哪些类型，可查看官方文档。
+                    - **data** `string (bytes format)`   
+                    媒体格式的原始字节，使用 base64 编码的字符串。  
+                - **functionCall** `object`  
+                    - **name** `string` (必填)  
+                    要调用的函数名称，必须是 a-z、A-Z、0-9 或包含下划线和短划线，长度上限为 64。  
+                    - **args** `object (Struct format)` (可选)  
+                    以 JSON 对象格式表示的函数参数和值。  
+                - **functionResponse** `object`  
+                FunctionCall 的结果输出，其中包含表示 FunctionDeclaration.name 的字符串和包含函数调用的任何输出的结构化 JSON 对象，用作模型的上下文。
+                    - **name** `string` (必须)  
+                    必需。要调用的函数名称。必须是 a-z、A-Z、0-9 或包含下划线和短划线，长度上限为 64。  
+                    - **response** `object (Struct format)` (必须)  
+                    以 JSON 对象格式表示的函数响应。调用者可以使用符合函数语法的任意键来返回函数输出，例如“output”“result”等。特别是，如果函数调用未能成功执行，响应可以包含“error”键，以便向模型返回错误详情。 
+                - **fileData** `object`  
+                基于 URI 的数据  
+                    - **mimeType** `string` (可选)  
+                    来源数据的 IANA 标准 MIME 类型。  
+                    - **fileUri** `string` (必须)  
+                    URI  
+                - **executableCode** `object`  
+                模型生成的旨在执行的代码。  
+                    - **language** `enum` (必须)  
+                    code 的编程语言。  
+                    - **code** `string` (必须)  
+                    code代码  
+                - **codeExecutionResult** `object`  
+                执行 ExecutableCode 的结果。  
+                    - **outcome** `enum` (必须)  
+                    代码执行结果  
+                    - **output** `string` (可选)  
+                    如果代码执行成功，则包含 stdout；否则包含 stderr 或其他说明。
+
+    - **finishReason** `FinishReason`（可选，仅输出）  
+    模型停止生成 token 的原因。如果为空，表示模型尚未停止生成。
+
+    - **safetyRatings** `array<SafetyRating>`  
+    响应候选项的安全性评分列表，每个类别最多一个评分。
+
+    - **citationMetadata** `CitationMetadata`（仅输出）  
+    模型生成的候选回答的引用信息。可能包含从基础 LLM 训练数据中“背诵”出的受版权保护材料的朗读信息。
+
+    - **tokenCount** `integer`（仅输出）  
+    该候选对象对应的 token 数量。
+
+    - **avgLogprobs** `number`（仅输出）  
+    候选者的平均对数概率得分。
+
+    - **logprobsResult** `LogprobsResult`（仅输出）  
+    回答 token 和热门 token 的对数似然得分。
+
+    - **urlContextMetadata** `UrlContextMetadata`（仅输出）  
+    与网址上下文检索工具相关的元数据。
+
+    - **index** `integer`（仅输出）  
+    该候选在响应候选列表中的索引。
+
+    - **finishMessage** `string`（可选，仅输出）  
+    详细说明模型停止生成 token 的原因。仅当设置了 `finishReason` 时才会填充此字段。
+
+- **promptFeedback** `object`  
+与内容过滤器相关的提示反馈，例如是否因安全策略被过滤等。
+
+- **usageMetadata** `object`（仅输出）  
+本次生成请求的 token 使用情况元数据，包括输入/输出 token 数、缓存命中情况等。
+    - **promptTokenCount** `integer`   
+    提示中的 token 数量。即使设置了 `cachedContent`，此值仍表示有效提示的总大小，包含缓存内容中的 token 数。
+    - **cachedContentTokenCount** `integer`  
+    提示的缓存部分（即缓存的内容）中的 token 数量。
+    - **candidatesTokenCount** `integer`  
+    所有生成的回答候选的 token 总数。
+    - **toolUsePromptTokenCount** `integer`（仅输出）  
+    工具使用提示中的 token 数量。
+    - **thoughtsTokenCount** `integer`（仅输出）  
+    思考模型的想法的 token 数量。
+    - **totalTokenCount** `integer`  
+    生成请求（提示 + 回答候选）的总 token 数。
+    - **promptTokensDetails** `array<ModalityTokenCount>`（仅输出）  
+    请求输入中处理的模态列表及其 token 计数。
+    - **cacheTokensDetails** `array<ModalityTokenCount>`（仅输出）  
+    请求输入中缓存内容的模态列表及其 token 计数。
+    - **candidatesTokensDetails** `array<ModalityTokenCount>`（仅输出）  
+    响应中返回的模态列表及其 token 计数。
+    - **toolUsePromptTokensDetails** `array<ModalityTokenCount>`（仅输出）  
+    为工具使用请求输入处理的模态列表及其 token 计数。
+
+- **modelVersion** `string`（仅输出）  
+  实际用于生成回答的模型版本标识。
+
+- **responseId** `string`（仅输出）  
+  用于唯一标识每个响应的 ID，便于追踪与调试。
+
+### 响应示例
+
+```json
+{
+  "candidates": [
+    {
+      "content": {
+        "role": "model",
+        "parts": [
+          {
+            "text": "这是一个关于魔法背包的故事。从前，有一个名叫艾米的小女孩，她在一个古老的古董店里发现了一个看起来普通的背包。然而，当她第一次使用它时，她发现这个背包有着神奇的能力——无论她放进去什么，背包都会自动整理并扩大内部空间。"
+          }
+        ]
+      },
+      "finishReason": "STOP",
+      "safetyRatings": [
+        {
+          "category": "HARM_CATEGORY_HARASSMENT",
+          "probability": "NEGLIGIBLE"
+        },
+        {
+          "category": "HARM_CATEGORY_HATE_SPEECH",
+          "probability": "NEGLIGIBLE"
+        },
+        {
+          "category": "HARM_CATEGORY_SEXUALLY_EXPLICIT",
+          "probability": "NEGLIGIBLE"
+        },
+        {
+          "category": "HARM_CATEGORY_DANGEROUS_CONTENT",
+          "probability": "NEGLIGIBLE"
+        }
+      ],
+      "tokenCount": 156,
+      "index": 0
+    }
+  ],
+  "promptFeedback": {
+    "blockReason": "BLOCK_REASON_UNSPECIFIED"
+  },
+  "usageMetadata": {
+    "promptTokenCount": 12,
+    "candidatesTokenCount": 156,
+    "totalTokenCount": 168,
+    "cachedContentTokenCount": 0
+  },
+  "modelVersion": {
+    "version": "gemini-2.0-flash-exp",
+    "launchDate": {
+      "year": 2024,
+      "month": 12,
+      "day": 11
+    }
+  },
+  "responseId": "chatcmpl-abc123xyz456"
+}
+```
+
+ 

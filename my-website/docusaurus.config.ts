@@ -97,7 +97,7 @@ const config: Config = {
       title: 'OmniMaaS',
       logo: {
         alt: 'OmniMaaS Logo',
-        src: 'img/logo.svg',
+        src: 'img/logo.png',
         href: 'https://omnimaas.com',
         target: '_blank',
       },

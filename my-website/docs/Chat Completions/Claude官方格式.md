@@ -9,7 +9,7 @@ OmniMaaS 的 Claude 原生 Chat Completions 接口面向已接入 Claude 生态�
 
 ### 端点
 ``` POST
-https://api.openai.com/v1/chat//messages
+https://api.openai.com/v1/chat/messages
 ```
 
 ### 请求体（Request Body）

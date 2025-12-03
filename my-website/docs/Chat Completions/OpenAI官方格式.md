@@ -271,7 +271,7 @@ for chunk in completion:
   "id": "chatcmpl-B9MHDbslfkBeAs8l4bebGdFOJ6PeG",
   "object": "chat.completion",
   "created": 1741570283,
-  "model": "gpt-4o-2024-08-06",
+  "model": "gpt-5.1",
   "choices": [
     {
       "index": 0,

@@ -7,7 +7,7 @@ OmniMaaS 的 OpenAI 原生 Chat Completions 接口为已经接入 OpenAI 生态�
 
 ### 端点
 ``` POST
-https://api.openai.com/v1/chat/completions
+https://api.omnimaas.com/v1/chat/completions
 ```
 
 ### 请求体（Request Body）
@@ -21,7 +21,7 @@ https://api.openai.com/v1/chat/completions
     - **content** `string` (必填) 
       消息内容
 - **model** `string`（必填）  
-  用于生成回复的模型 ID，例如 `gpt-4o` 或 `o3`。不同模型在能力、性能和价格上有所差异，可参考模型指南选择合适的模型。
+  用于生成回复的模型 ID，例如 `gpt-5.1` 或 `gpt-5-pro`。不同模型在能力、性能和价格上有所差异，可参考模型指南选择合适的模型。
 
 - **audio** `object | null`（可选）  
   配置音频输出参数。当你在 `modalities` 中请求 `["audio"]` 时，该字段必填。

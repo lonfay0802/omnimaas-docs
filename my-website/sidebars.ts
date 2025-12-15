@@ -26,6 +26,15 @@ const sidebars: SidebarsConfig = {
     'Chat Completions/OpenAI官方格式',
     'Chat Completions/Claude官方格式',
     'Chat Completions/Gemini官方格式',
+    {
+      type: 'html',
+      value: '<div style="font-weight: 700; color: #000; font-size: 14px; padding: 8px 0 4px 0; letter-spacing: 0.5px;">视频生成</div>',
+    },
+    {
+      type: 'doc',
+      id: 'Chat Completions/Vidu',
+      label: 'Vidu、Kling、Jimeng格式',
+    },
   ],
 };
 

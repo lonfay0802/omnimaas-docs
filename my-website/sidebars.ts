@@ -35,6 +35,11 @@ const sidebars: SidebarsConfig = {
       id: 'Chat Completions/Vidu',
       label: 'Vidu、Kling、Jimeng格式',
     },
+    {
+      type: 'html',
+      value: '<div style="font-weight: 700; color: #000; font-size: 14px; padding: 8px 0 4px 0; letter-spacing: 0.5px;">图像生成</div>',
+    },
+    '图像生成/OpenAI格式',
   ],
 };
 

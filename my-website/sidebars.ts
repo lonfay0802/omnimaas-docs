@@ -41,6 +41,11 @@ const sidebars: SidebarsConfig = {
       label: 'OpenAI视频格式（Sora）',
     },
     {
+      type: 'doc',
+      id: 'Chat Completions/wan',
+      label: '万相视频生成',
+    },
+    {
       type: 'html',
       value: '<div style="font-weight: 700; color: #000; font-size: 14px; padding: 8px 0 4px 0; letter-spacing: 0.5px;">图像生成</div>',
     },

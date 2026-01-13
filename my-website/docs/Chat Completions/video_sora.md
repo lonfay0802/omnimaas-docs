@@ -27,11 +27,7 @@ POST /v1/videos
 - **input_reference** `file` (可选)  
     输入图片文件（图生视频时使用）
 - **size** `string` (可选)  
-    分辨率参数，默认值依据模型和视频时长而定：
-    - viduq2(1-10秒)：默认 720p，可选：540p、720p、1080p
-    - viduq1(5秒)：默认 1080p，可选：1080p
-    - vidu1.5(4秒)：默认 360p，可选：360p、720p、1080p
-    - vidu1.5(8秒)：默认 720p，可选：720p
+    分辨率参数，默认值依据模型和视频时长而定，输出分辨率，格式为宽度x高度，默认为 720x1280
 - **metadata** `string` (可选)
     扩展参数（JSON字符串格式）（如 negative_prompt, style, quality_level 等）
 

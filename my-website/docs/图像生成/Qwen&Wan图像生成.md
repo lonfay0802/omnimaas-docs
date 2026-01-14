@@ -7,7 +7,10 @@ OmniMaaS 目前已支持OpenAI标准协议的图像生成、编辑等操作的�
 ## 支持模型
 | 模型名称 | 描述 |
 |---------|---------|
-| gpt-image-1   | GPT Image 1 是一个原生多模态语言模型，它接受文本和图像输入，并生成图像输出。   |
+| qwen-image-edit-plus   | 通义千问系列图像编辑Plus模型，在首版Edit模型基础上进一步优化了推理性能与系统稳定性，大幅缩短图像生成与编辑的响应时间；支持单次请求返回多张图片，显著提升用户体验。   |
+| wan2.5-t2i-preview   | 通义万相2.5-文生图-Preview，全新升级模型架构。画面美学、设计感、真实质感显著提升，精准指令遵循，擅长中英文和小语种文字生成，支持复杂结构化长文本和图表、架构图等内容生成。   |
+| wan2.5-i2i-preview   | 通义万相2.5-图像编辑-Preview，全新升级模型架构。支持指令控制实现丰富的图像编辑能力，指令遵循能力进一步提升，支持高一致性保持的多图参考生成，文字生成表现优异。   |
+
 
 ## 创建图片
 
@@ -51,7 +54,6 @@ curl https://api.omnimaas.com/v1/images/generations \
 ``` 
 POST /v1/images/edits 
 ```
-
 ### 请求体
 
 - **model** `string`（必填）  
@@ -66,21 +68,32 @@ POST /v1/images/edits
     生成图片的尺寸。默认值：1024x1024
 
 ### 请求示例
-#### 多图示例（Form请求）
+#### 单图示例
 ```
 curl https://api.omnimaas.com/v1/images/edits \
+  -H "Content-Type: application/json" \
   -H "Authorization: Bearer $NEWAPI_API_KEY" \
-  -F "model=gpt-image-1" \
-  -F "image[]=@body-lotion.png" \
-  -F "image[]=@bath-bomb.png" \
-  -F "image[]=@incense-kit.png" \
-  -F "image[]=@soap.png" \
-  -F "prompt=创建一个包含这四个物品的精美礼品篮" \
-  -F "quality=high"
+  -d '{
+    "model": "qwen-image-edit-plus",
+    "prompt": "生成一张符合深度图的图像，遵循以下描述：一辆红色的破旧的自行车停在一条泥泞的小路上，背景是茂密的原始森林",
+    "image": "https://help-static-aliyun-doc.aliyuncs.com/file-manage-files/zh-CN/20250925/fpakfo/image36.webp"
+}'
+```
+
+#### 多图示例
+```
+curl https://api.omnimaas.com/v1/images/edits \
+  -H "Content-Type: application/json" \
+  -H "Authorization: Bearer $NEWAPI_API_KEY" \
+  -d '{
+    "model": "qwen-image-edit-plus",
+    "prompt": "生成一张符合深度图的图像，遵循以下描述：一辆红色的破旧的自行车停在一条泥泞的小路上，背景是茂密的原始森林",
+    "image": ["https://help-static-aliyun-doc.aliyuncs.com/file-manage-files/zh-CN/20250925/fpakfo/image36.webp"]
+}'
 ```
   
 ## 请求响应
-返回包含图片对象列表的响应，以及不同渠道的个性化输出。
+所有三个端点都返回包含图片对象列表的响应，以及不同渠道的个性化输出。
 
 ### 响应结构
 - **created** `int`
@@ -100,27 +113,30 @@ curl https://api.omnimaas.com/v1/images/edits \
     输出使用的令牌数
     - **total_tokens** `int`
     使用的总令牌数
-    - **input_tokens_details** `int`
-    输入令牌的详细信息（文本令牌和图像令牌）
+    - **image_count** `int`
+    图片生成总张数
 
 ### 输出示例
-#### OpenAI 示例
 ```
 {
-    "created": 1766308943,
-    "background": "opaque",
-    "data": [{"b64_json": ""}],
-    "output_format": "png",
-    "quality": "high",
-    "size": "1024x1024",
-    "usage": {
-        "input_tokens": 52,
-        "input_tokens_details": {
-            "image_tokens": 0,
-            "text_tokens": 52
-        },
-        "output_tokens": 4160,
-        "total_tokens": 4212
+    {
+        "data": [
+            {
+                "url": "https://dashscope-result-sh.oss-cn-shanghai.aliyuncs.com/1d/9f/20260114/eb920ed5/ef851b1b-8c4f-4ba3-b323-42a81b331ac0.png?Expires=1768489719&OSSAccessKeyId=LTAI5tKPD3TMqf2Lna1fASuh&Signature=G1w60K1vh0b5v997i6a1GwOPniI%3D",
+                "b64_json": "",
+                "revised_prompt": ""
+            }
+        ],
+        "created": 1768403299,
+        "usage": {
+            "input_tokens": 0,
+            "output_tokens": 0,
+            "total_tokens": 0,
+            "image_count": 1
+        }
     }
 }
 ```
+
+## 说明
+目前z-image、qwen-image、wan2.6是同步接口，2.5及以下为异步接口；为了输出一致性，目前系统会将异步输出结果自动转成同步结果，无需再次调用查询接口即可完成数据结果的获取。

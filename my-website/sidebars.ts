@@ -50,6 +50,7 @@ const sidebars: SidebarsConfig = {
       value: '<div style="font-weight: 700; color: #000; font-size: 14px; padding: 8px 0 4px 0; letter-spacing: 0.5px;">图像生成</div>',
     },
     '图像生成/OpenAI格式',
+    '图像生成/Qwen&Wan图像生成',
     {
       type: 'html',
       value: '<div style="font-weight: 700; color: #000; font-size: 14px; padding: 8px 0 4px 0; letter-spacing: 0.5px;">客户端集成</div>',

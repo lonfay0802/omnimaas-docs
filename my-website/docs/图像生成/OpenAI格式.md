@@ -38,7 +38,7 @@ POST /v1/images/generations
 
 ### 请求示例
 ```
-curl https://154.23.160.216:3000/v1/images/generations \
+curl https://api.omnimaas.com/v1/images/generations \
   -H "Content-Type: application/json" \
   -H "Authorization: Bearer $NEWAPI_API_KEY" \
   -d '{
@@ -72,7 +72,7 @@ POST /v1/images/edits
 ### 请求示例
 #### 单图示例
 ```
-curl https://154.23.160.216:3000/v1/images/edits \
+curl https://api.omnimaas.com/v1/images/edits \
   -H "Content-Type: application/json" \
   -H "Authorization: Bearer $NEWAPI_API_KEY" \
   -d '{
@@ -84,7 +84,7 @@ curl https://154.23.160.216:3000/v1/images/edits \
 
 #### 多图示例
 ```
-curl https://154.23.160.216:3000/v1/images/edits \
+curl https://api.omnimaas.com/v1/images/edits \
   -H "Content-Type: application/json" \
   -H "Authorization: Bearer $NEWAPI_API_KEY" \
   -d '{
@@ -98,7 +98,7 @@ curl https://154.23.160.216:3000/v1/images/edits \
 所有三个端点都返回包含图片对象列表的响应，以及不同渠道的个性化输出。
 
 ### 响应结构
-- **model** `int`
+- **created** `int`
     响应创建的时间戳
 - **data** `[]object`
     生成的图片对象列表
@@ -115,8 +115,14 @@ curl https://154.23.160.216:3000/v1/images/edits \
     输出使用的令牌数
     - **total_tokens** `int`
     使用的总令牌数
+
+    ** ⚠️注意 input_tokens_details仅在如OpenAI系列按照Tokens收费的情况下存在**
     - **input_tokens_details** `int`
     输入令牌的详细信息（文本令牌和图像令牌）
+    
+    ** ⚠️注意 如果是万相模型则会改为：image_count **
+    - **image_count** `int`
+    图片生成总张数
 
 ### 输出示例
 #### OpenAI 示例
@@ -139,40 +145,28 @@ curl https://154.23.160.216:3000/v1/images/edits \
     }
 }
 ```
-#### Qwen模型示例
+
+### Wan 示例
 ```
 {
-    "data": [
-        {
-            "url": "https://dashscope-result-hz.oss-cn-hangzhou.aliyuncs.com/7d/05/20251221/31eda923/2dae0c0b-2152-4a74-97cd-49054c110e67-1.png?Expires=1766911160&OSSAccessKeyId=LTAI5tKPD3TMqf2Lna1fASuh&Signature=PoeWqus%2FZmBmydDINqFRtm8jKHI%3D",
-            "b64_json": "",
-            "revised_prompt": ""
-        }
-    ],
-    "created": 1766305349,
-    "extra": {
-        "output": {
-            "choices": [
-                {
-                    "message": {
-                        "content": [
-                            {
-                                "image": "https://dashscope-result-hz.oss-cn-hangzhou.aliyuncs.com/7d/05/20251221/31eda923/2dae0c0b-2152-4a74-97cd-49054c110e67-1.png?Expires=1766911160&OSSAccessKeyId=LTAI5tKPD3TMqf2Lna1fASuh&Signature=PoeWqus%2FZmBmydDINqFRtm8jKHI%3D"
-                            }
-                        ],
-                        "role": "assistant"
-                    }
-                }
-            ],
-            "finished": true
-        },
-        "request_id": "f214303a-08bc-4cbb-b9ae-61decd4f81f2",
+    {
+        "data": [
+            {
+                "url": "https://dashscope-result-sh.oss-cn-shanghai.aliyuncs.com/1d/9f/20260114/eb920ed5/ef851b1b-8c4f-4ba3-b323-42a81b331ac0.png?Expires=1768489719&OSSAccessKeyId=LTAI5tKPD3TMqf2Lna1fASuh&Signature=G1w60K1vh0b5v997i6a1GwOPniI%3D",
+                "b64_json": "",
+                "revised_prompt": ""
+            }
+        ],
+        "created": 1768403299,
         "usage": {
-            "height": 864,
-            "image_count": 1,
-            "width": 1216
+            "input_tokens": 0,
+            "output_tokens": 0,
+            "total_tokens": 0,
+            "image_count": 1
         }
     }
 }
 ```
 
+## 说明
+目前z-image、qwen-image、wan2.6是同步接口，2.5及以下为异步接口；为了输出一致性，目前系统会将异步输出结果自动转成同步结果，无需再次调用查询接口即可完成数据结果的获取。

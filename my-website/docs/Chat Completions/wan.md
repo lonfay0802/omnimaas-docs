@@ -16,7 +16,7 @@ POST /v1/videos
 
 ## 文生视频
 
-### 请求体 (multipart/form-data)
+### 请求体
 
 - **model** `string`（必填）
     用于生成视频的模型ID，可选值：`wan2.6-t2v`
@@ -67,7 +67,7 @@ curl https://api.omnimaas.com/v1/videos \
     用于生成视频的模型ID，可选值：`wan2.6-i2v`
 - **prompt** `string` (必填)
     文本提示词，生成视频的文本描述。
-- **seconds** `string` (可选)  
+- **duration** `int` (可选)  
     视频时长参数，默认值依据模型而定:
     wan2.6-i2v：可选值为5、10、15。默认值为5。
 - **size** `string` (可选)  
@@ -86,20 +86,23 @@ curl https://api.omnimaas.com/v1/videos \
 metadata 参数的作用是传递模型特有的参数，比如阿里云万相的图片URL、水印、prompt智能改写等。metadata 参数的格式为 JSON 字符串，比如：
 ```
 {
-    "prompt_extend": true
+    "img_url": "https://help-static-aliyun-doc.aliyuncs.com/file-manage-files/zh-CN/20250925/wpimhv/rap.png"
 }
 ```
 
 #### 图生视频 (文本提示 + 图片文件)
 
 ```
-curl https://api.omnimaas.com/v1/videos \
-  -H "Authorization: Bearer sk-xxxx" \
-  -F "prompt=猫咪慢慢睁开眼睛，伸懒腰" \
-  -F "model=sora-2" \
-  -F "seconds=3" \
-  -F "size=1920x1080" \
-  -F "input_reference=@/path/to/cat.jpg"
+curl --location --request POST 'http://api.omnimaas.com/v1/videos' \
+--header 'Content-Type: application/json' \
+--header 'Authorization: Bearer sk-xxx' \
+--data-raw '{
+    "model": "wan2.6-i2v",
+    "prompt": "让这张图片动起来，添加自然的运动效果",
+    "metadata": {
+        "img_url": "https://help-static-aliyun-doc.aliyuncs.com/file-manage-files/zh-CN/20250925/wpimhv/rap.png"
+    }
+}'
 ```
 
 ## 响应
@@ -305,55 +308,75 @@ curl 'https://api.omnimaas.com/v1/videos/video_123/content' \
 
 ```
 // 阿里云万相文生视频
-async function generateAliVideo() {
-  const formData = new FormData();
-  formData.append('prompt', '一幅史诗级可爱的场景。一只小巧可爱的卡通小猫将军，身穿细节精致的金色盔甲，头戴一个稍大的头盔，勇敢地站在悬崖上。他骑着一匹虽小但英勇的战马，说：”青海长云暗雪山，孤城遥望玉门关。黄沙百战穿金甲，不破楼兰终不还。“。悬崖下方，一支由老鼠组成的、数量庞大、无穷无尽的军队正带着临时制作的武器向前冲锋。这是一个戏剧性的、大规模的战斗场景，灵感来自中国古代的战争史诗。远处的雪山上空，天空乌云密布。整体氛围是“可爱”与“霸气”的搞笑和史诗般的融合。');
-  formData.append('model', 'wan2.6-t2v');
-  formData.append('seconds', '5');
-  formData.append('size', '1920*1080');
-  formData.append('metadata', JSON.stringify({
-    watermark: false,
-    prompt_extend: true
-  }));
+import requests
 
-  const response = await fetch('https://api.omnimaas.com/v1/videos', {
-    method: 'POST',
-    headers: {
-      'Authorization': 'Bearer sk-xxxx'
-    },
-    body: formData
-  });
+url = 'https://api.omnimaas.com/v1/videos'
 
-  const result = await response.json();
-  return result.id;
+headers = {
+    'Content-Type': 'application/json',
+    'Authorization': 'Bearer sk-xxxx'
 }
+
+data = {
+    "model": "wan2.6-i2v",
+    "prompt": "蓝天白云，一群大雁飞过"
+}
+
+try:
+    response = requests.post(url, headers=headers, json=data)
+    
+    # 检查响应状态
+    print(f"状态码: {response.status_code}")
+    print(f"响应头: {response.headers}")
+    print(f"响应内容: {response.text}")
+    
+    # 如果是JSON响应，可以解析
+    if 'application/json' in response.headers.get('Content-Type', ''):
+        response_data = response.json()
+        print(f"解析后的JSON: {response_data}")
+    
+except requests.exceptions.RequestException as e:
+    print(f"请求失败: {e}")
+except ValueError as e:
+    print(f"JSON解析失败: {e}")
 ```
 
 ### 图生视频
 
 ```
 // 阿里云万相图生视频
-async function generateAliImageToVideo() {
-  const formData = new FormData();
-  formData.append('prompt', '让这张图片动起来，添加自然的运动效果');
-  formData.append('model', 'wan2.6-i2v');
-  formData.append('seconds', '5');
-  formData.append('resolution', '720P');
-  formData.append('input_reference', imageFile);
-  formData.append('metadata', JSON.stringify({
-    watermark: false,
-    prompt_extend: true
-  }));
+import requests
 
-  const response = await fetch('https://你的newapi服务器地址/v1/videos', {
-    method: 'POST',
-    headers: {
-      'Authorization': 'Bearer sk-xxxx'
-    },
-    body: formData
-  });
+url = 'https://api.omnimaas.com/v1/videos'
 
-  const result = await response.json();
-  return result.id;
+headers = {
+    'Content-Type': 'application/json',
+    'Authorization': 'Bearer sk-xxxx'
 }
+
+data = {
+    "model": "wan2.6-i2v",
+    "prompt": "让这张图片动起来，添加自然的运动效果",
+    "metadata": {
+        "img_url": "https://help-static-aliyun-doc.aliyuncs.com/file-manage-files/zh-CN/20250925/wpimhv/rap.png"
+    }
+}
+
+try:
+    response = requests.post(url, headers=headers, json=data)
+    
+    # 检查响应状态
+    print(f"状态码: {response.status_code}")
+    print(f"响应头: {response.headers}")
+    print(f"响应内容: {response.text}")
+    
+    # 如果是JSON响应，可以解析
+    if 'application/json' in response.headers.get('Content-Type', ''):
+        response_data = response.json()
+        print(f"解析后的JSON: {response_data}")
+    
+except requests.exceptions.RequestException as e:
+    print(f"请求失败: {e}")
+except ValueError as e:
+    print(f"JSON解析失败: {e}")
 ```

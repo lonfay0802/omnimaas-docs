@@ -55,7 +55,7 @@ curl https://api.omnimaas.com/v1/videos \
   -F "prompt=一个穿着宇航服的宇航员在月球上行走, 高品质, 电影级" \
   -F "model=wan2.6-t2v" \
   -F "seconds=5" \
-  -F "size=1920x1080"
+  -F "size=1920*1080"
 ```
 
 

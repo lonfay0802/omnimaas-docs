@@ -11,7 +11,7 @@ OmniMaaS 的 Gemini 原生 Chat Completions 接口面向已经接入 Google Gemi
 
 ### 端点
 ``` POST
-https://api.openai.com/v1beta/{model=models/*}:generateContent
+https://api.omnimaas.com/v1beta/{model=models/*}:generateContent
 ```
 
 ### 路径参数

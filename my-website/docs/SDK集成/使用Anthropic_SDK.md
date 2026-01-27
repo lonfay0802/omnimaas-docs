@@ -1,18 +1,24 @@
-import { FaExclamationTriangle } from 'react-icons/fa';
-
-# 创建对话请求（Authropic）
+# 创建对话请求（Anthropic）
 
 ## 概述
 OmniMaaS 的 Claude 原生 Chat Completions 接口面向已接入 Claude 生态或计划统一接入多家模型的团队，提供一条与官方接口规格高度一致的接入路径。平台在协议层兼容 POST /v1/messages 等 Claude 官方规范：请求体沿用 model、messages（含多段内容块）、工具调用等字段设计，并支持流式响应与多模态扩展。
 
 ## 请求
 
-### 端点
-``` POST
-https://api.omnimaas.com/v1/messages
+### Endpoint
+```
+POST https://api.omnimaas.com/v1/messages
 ```
 
-### 请求体（Request Body）
+### Headers
+
+| 参数名 | 类型 | 必填 | 说明 |
+|--------|------|------|------|
+| Authorization | string | 是 | Bearer Token，格式：`Bearer YOUR_API_KEY` |
+| Content-Type | string | 是 | 请求体格式，固定为 `application/json` |
+| anthropic-version | string | 否 | API 版本号，例如：`2023-06-01` |
+
+### Request Body
 
 - **max_tokens** `int`（必填，最小值 ≥ 1）  
   在模型停止前最多生成的 token 数。模型可能会在达到上限前自然结束；不同模型支持的最大值不同，请参考模型文档。
@@ -108,19 +114,21 @@ https://api.omnimaas.com/v1/messages
 
 ### 请求示例
 
-Python版本的用户如果本地没有安装过Authropic库，可使用以下命令安装：
+Python版本的用户如果本地没有安装过 Anthropic 库，可使用以下命令安装：
 ``` bash
 pip install anthropic
 ```
 
-<FaExclamationTriangle style={{ color: '#facc15', fontSize: '1em' }} /> 安装Authropic库需将本地Python环境升级到Python3.8以上！
+**注意**：安装 Anthropic 库需将本地 Python 环境升级到 Python 3.8 以上！
 
 ``` python
 from anthropic import Anthropic
 
 client = Anthropic(
     api_key="my-anthropic-api-key",
+    base_url="https://api.omnimaas.com/v1"
 )
+
 message = client.messages.create(
     max_tokens=1024,
     messages=[{
@@ -132,7 +140,7 @@ message = client.messages.create(
 print(message.id)
 ```
 
-### 响应体（Response Body）
+### Response Body
 
 - **id** `string`  
   对象的唯一标识符。ID 的格式和长度可能会随着时间变化。
@@ -231,4 +239,163 @@ print(message.id)
     "service_tier": "standard"
   }
 }
+```
+## 代码示例
+
+### Python 示例
+
+#### 使用Anthropic SDK（推荐）
+
+```python
+from anthropic import Anthropic
+
+client = Anthropic(
+    base_url='https://api.omnimaas.com',
+    api_key='YOUR_API_KEY'
+)
+
+# 非流式调用
+message = client.messages.create(
+    model="claude-3-5-sonnet-20241022",
+    max_tokens=1024,
+    messages=[
+        {"role": "user", "content": "你好，请介绍一下你自己"}
+    ]
+)
+
+print(message.content[0].text)
+```
+
+#### 流式调用
+
+```python
+from anthropic import Anthropic
+
+client = Anthropic(
+    base_url='https://api.omnimaas.com',
+    api_key='YOUR_API_KEY'
+)
+
+with client.messages.stream(
+    model="claude-3-5-sonnet-20241022",
+    max_tokens=1024,
+    messages=[{"role": "user", "content": "讲个笑话"}]
+) as stream:
+    for text in stream.text_stream:
+        print(text, end='', flush=True)
+```
+
+### Go 示例
+
+```go
+package main
+
+import (
+    "bytes"
+    "encoding/json"
+    "fmt"
+    "io"
+    "net/http"
+)
+
+type ClaudeRequest struct {
+    Model     string    `json:"model"`
+    MaxTokens int       `json:"max_tokens"`
+    Messages  []Message `json:"messages"`
+}
+
+type Message struct {
+    Role    string `json:"role"`
+    Content string `json:"content"`
+}
+
+type ClaudeResponse struct {
+    Content []struct {
+        Text string `json:"text"`
+    } `json:"content"`
+}
+
+func main() {
+    reqBody := ClaudeRequest{
+        Model:     "claude-3-5-sonnet-20241022",
+        MaxTokens: 1024,
+        Messages: []Message{
+            {Role: "user", Content: "你好"},
+        },
+    }
+
+    jsonData, _ := json.Marshal(reqBody)
+    req, _ := http.NewRequest("POST", 
+        "https://api.omnimaas.com/v1/messages", 
+        bytes.NewBuffer(jsonData))
+    req.Header.Set("Content-Type", "application/json")
+    req.Header.Set("x-api-key", "YOUR_API_KEY")
+    req.Header.Set("anthropic-version", "2023-06-01")
+
+    client := &http.Client{}
+    resp, _ := client.Do(req)
+    defer resp.Body.Close()
+
+    body, _ := io.ReadAll(resp.Body)
+    var result ClaudeResponse
+    json.Unmarshal(body, &result)
+    
+    fmt.Println(result.Content[0].Text)
+}
+```
+
+### Node.js 示例
+
+#### 使用Anthropic SDK（推荐）
+
+```javascript
+const Anthropic = require('@anthropic-ai/sdk');
+
+const client = new Anthropic({
+    baseURL: 'https://api.omnimaas.com',
+    apiKey: 'YOUR_API_KEY'
+});
+
+// 非流式调用
+async function main() {
+    const message = await client.messages.create({
+        model: 'claude-3-5-sonnet-20241022',
+        max_tokens: 1024,
+        messages: [
+            { role: 'user', content: '你好，请介绍一下你自己' }
+        ]
+    });
+
+    console.log(message.content[0].text);
+}
+
+main();
+```
+
+#### 流式调用
+
+```javascript
+const Anthropic = require('@anthropic-ai/sdk');
+
+const client = new Anthropic({
+    baseURL: 'https://api.omnimaas.com',
+    apiKey: 'YOUR_API_KEY'
+});
+
+async function main() {
+    const stream = await client.messages.stream({
+        model: 'claude-3-5-sonnet-20241022',
+        max_tokens: 1024,
+        messages: [{ role: 'user', content: '讲个笑话' }]
+    });
+
+    for await (const chunk of stream) {
+        if (chunk.type === 'content_block_delta' && 
+            chunk.delta.type === 'text_delta') {
+            process.stdout.write(chunk.delta.text);
+        }
+    }
+}
+
+main();
 ```

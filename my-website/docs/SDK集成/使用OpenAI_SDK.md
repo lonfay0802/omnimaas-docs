@@ -5,12 +5,19 @@ OmniMaaS 的 OpenAI 原生 Chat Completions 接口为已经接入 OpenAI 生态�
 
 ## 请求
 
-### 端点
-``` POST
-https://api.omnimaas.com/v1/chat/completions
+### Endpoint
+```
+POST https://api.omnimaas.com/v1/chat/completions
 ```
 
-### 请求体（Request Body）
+### Headers
+
+| 参数名 | 类型 | 必填 | 说明 |
+|--------|------|------|------|
+| Authorization | string | 是 | Bearer Token，格式：`Bearer YOUR_API_KEY` |
+| Content-Type | string | 是 | 请求体格式，固定为 `application/json` |
+
+### Request Body
 
 以下为 `chat.completions` 接口请求体支持的主要参数说明（与 OpenAI 官方语义保持一致）：
 
@@ -154,44 +161,52 @@ https://api.omnimaas.com/v1/chat/completions
 #### 非流式调用
 ```python
 from openai import OpenAI
-client = OpenAI(base_url='https://www.omnimaas.com/v1', api_key='your_api_key')
+
+client = OpenAI(
+    base_url='https://api.omnimaas.com/v1',
+    api_key='your_api_key'
+)
 
 completion = client.chat.completions.create(
-  model="gpt-5.1",
-  messages=[
-    {"role": "developer", "content": "You are a helpful assistant."},
-    {"role": "user", "content": "Hello!"}
-  ],
-  temperature=0.7,
-  top_p: 0,
-  n=1,
-  stream=False,
-  max_tokens=2000
+    model="gpt-5.1",
+    messages=[
+        {"role": "developer", "content": "You are a helpful assistant."},
+        {"role": "user", "content": "Hello!"}
+    ],
+    temperature=0.7,
+    top_p=0.9,
+    n=1,
+    stream=False,
+    max_tokens=2000
 )
 
 print(completion.choices[0].message)
-
 ```
 
 #### 流式调用
 
 ```python
 from openai import OpenAI
-client = OpenAI(base_url='https://www.omnimaas.com/v1', api_key='your_api_key')
+
+client = OpenAI(
+    base_url='https://api.omnimaas.com/v1',
+    api_key='your_api_key'
+)
 
 completion = client.chat.completions.create(
-  model="gpt-5.1",
-  messages=[
-    {"role": "developer", "content": "You are a helpful assistant."},
-    {"role": "user", "content": "Hello!"}
-  ],
-  stream=True
+    model="gpt-5.1",
+    messages=[
+        {"role": "developer", "content": "You are a helpful assistant."},
+        {"role": "user", "content": "Hello!"}
+    ],
+    stream=True
 )
 
 for chunk in completion:
-  print(chunk.choices[0].delta)
+    print(chunk.choices[0].delta)
 ```
-### 响应体（Response Body）
+
+### Response Body
 
 以下为 `chat.completions` 接口响应结构的主要参数说明（与 OpenAI 官方语义保持一致）：
 
@@ -314,4 +329,163 @@ for chunk in completion:
 ....
 
 {"id":"chatcmpl-123","object":"chat.completion.chunk","created":1694268190,"model":"gpt-4o-mini", "system_fingerprint": "fp_44709d6fcb", "choices":[{"index":0,"delta":{},"logprobs":null,"finish_reason":"stop"}]}
+```
+## 代码示例
+
+### Python 示例
+
+#### 使用OpenAI SDK（推荐）
+
+```python
+from openai import OpenAI
+
+client = OpenAI(
+    base_url='https://api.omnimaas.com/v1',
+    api_key='YOUR_API_KEY'
+)
+
+# 非流式调用
+completion = client.chat.completions.create(
+    model="gpt-4",
+    messages=[
+        {"role": "user", "content": "你好，请介绍一下你自己"}
+    ],
+    temperature=0.7
+)
+
+print(f"回复: {completion.choices[0].message.content}")
+print(f"Token使用: {completion.usage}")
+```
+
+#### 流式调用
+
+```python
+from openai import OpenAI
+
+client = OpenAI(
+    base_url='https://api.omnimaas.com/v1',
+    api_key='YOUR_API_KEY'
+)
+
+stream = client.chat.completions.create(
+    model="gpt-4",
+    messages=[{"role": "user", "content": "讲个笑话"}],
+    stream=True
+)
+
+for chunk in stream:
+    if chunk.choices[0].delta.content:
+        print(chunk.choices[0].delta.content, end='', flush=True)
+```
+
+### Go 示例
+
+#### 非流式调用
+
+```go
+package main
+
+import (
+    "bytes"
+    "encoding/json"
+    "fmt"
+    "io"
+    "net/http"
+)
+
+type ChatRequest struct {
+    Model    string    `json:"model"`
+    Messages []Message `json:"messages"`
+}
+
+type Message struct {
+    Role    string `json:"role"`
+    Content string `json:"content"`
+}
+
+type ChatResponse struct {
+    Choices []struct {
+        Message struct {
+            Content string `json:"content"`
+        } `json:"message"`
+    } `json:"choices"`
+}
+
+func main() {
+    reqBody := ChatRequest{
+        Model: "gpt-4",
+        Messages: []Message{
+            {Role: "user", Content: "你好"},
+        },
+    }
+
+    jsonData, _ := json.Marshal(reqBody)
+    req, _ := http.NewRequest("POST", 
+        "https://api.omnimaas.com/v1/chat/completions", 
+        bytes.NewBuffer(jsonData))
+    req.Header.Set("Content-Type", "application/json")
+    req.Header.Set("Authorization", "Bearer YOUR_API_KEY")
+
+    client := &http.Client{}
+    resp, _ := client.Do(req)
+    defer resp.Body.Close()
+
+    body, _ := io.ReadAll(resp.Body)
+    var result ChatResponse
+    json.Unmarshal(body, &result)
+    
+    fmt.Println(result.Choices[0].Message.Content)
+}
+```
+
+### Node.js 示例
+
+#### 使用OpenAI SDK（推荐）
+
+```javascript
+const OpenAI = require('openai');
+
+const client = new OpenAI({
+    baseURL: 'https://api.omnimaas.com/v1',
+    apiKey: 'YOUR_API_KEY'
+});
+
+// 非流式调用
+async function main() {
+    const completion = await client.chat.completions.create({
+        model: 'gpt-4',
+        messages: [
+            { role: 'user', content: '你好，请介绍一下你自己' }
+        ]
+    });
+
+    console.log(completion.choices[0].message.content);
+}
+
+main();
+```
+
+#### 流式调用
+
+```javascript
+const OpenAI = require('openai');
+
+const client = new OpenAI({
+    baseURL: 'https://api.omnimaas.com/v1',
+    apiKey: 'YOUR_API_KEY'
+});
+
+async function main() {
+    const stream = await client.chat.completions.create({
+        model: 'gpt-4',
+        messages: [{ role: 'user', content: '讲个笑话' }],
+        stream: true
+    });
+
+    for await (const chunk of stream) {
+        process.stdout.write(chunk.choices[0]?.delta?.content || '');
+    }
+}
+
+main();
 ```

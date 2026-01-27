@@ -21,30 +21,9 @@ const sidebars: SidebarsConfig = {
     '快速开始',
     {
       type: 'html',
-      value: '<div style="font-weight: 700; color: #000; font-size: 14px; padding: 8px 0 4px 0; letter-spacing: 0.5px;">平台能力</div>',
+      value: '<div style="font-weight: 700; color: #000; font-size: 14px; padding: 8px 0 4px 0; letter-spacing: 0.5px;">文本对话</div>',
     },
-    'Chat Completions/OpenAI官方格式',
-    'Chat Completions/Claude官方格式',
-    'Chat Completions/Gemini官方格式',
-    {
-      type: 'html',
-      value: '<div style="font-weight: 700; color: #000; font-size: 14px; padding: 8px 0 4px 0; letter-spacing: 0.5px;">视频生成</div>',
-    },
-    {
-      type: 'doc',
-      id: 'Chat Completions/Vidu',
-      label: 'Vidu、Kling、Jimeng格式',
-    },
-    {
-      type: 'doc',
-      id: 'Chat Completions/video_sora',
-      label: 'OpenAI视频格式（Sora）',
-    },
-    {
-      type: 'doc',
-      id: 'Chat Completions/wan',
-      label: '万相视频生成',
-    },
+    '文本对话/对话补全',
     {
       type: 'html',
       value: '<div style="font-weight: 700; color: #000; font-size: 14px; padding: 8px 0 4px 0; letter-spacing: 0.5px;">图像生成</div>',
@@ -53,12 +32,48 @@ const sidebars: SidebarsConfig = {
     '图像生成/Qwen&Wan图像生成',
     {
       type: 'html',
-      value: '<div style="font-weight: 700; color: #000; font-size: 14px; padding: 8px 0 4px 0; letter-spacing: 0.5px;">客户端集成</div>',
+      value: '<div style="font-weight: 700; color: #000; font-size: 14px; padding: 8px 0 4px 0; letter-spacing: 0.5px;">视频生成</div>',
+    },
+    {
+      type: 'doc',
+      id: '视频生成/Sora',
+      label: 'Sora',
+    },
+    {
+      type: 'doc',
+      id: '视频生成/Vidu',
+      label: 'Vidu',
+    },
+    {
+      type: 'doc',
+      id: '视频生成/Kling',
+      label: 'Kling',
+    },
+    {
+      type: 'doc',
+      id: '视频生成/Jimeng',
+      label: 'Jimeng',
+    },
+    {
+      type: 'doc',
+      id: '视频生成/Wan视频',
+      label: 'Wan视频',
+    },
+    {
+      type: 'html',
+      value: '<div style="font-weight: 700; color: #000; font-size: 14px; padding: 8px 0 4px 0; letter-spacing: 0.5px;">SDK 集成</div>',
+    },
+    'SDK集成/使用OpenAI_SDK',
+    'SDK集成/使用Anthropic_SDK',
+    'SDK集成/使用Google_AI_SDK',
+    {
+      type: 'html',
+      value: '<div style="font-weight: 700; color: #000; font-size: 14px; padding: 8px 0 4px 0; letter-spacing: 0.5px;">客户端工具</div>',
     },
     {
       type: 'doc',
       id: 'client-integration/cherry_studio',
-      label: 'Cherry Studio集成',
+      label: 'Cherry Studio',
     },
   ],
 };

@@ -1,27 +1,32 @@
-import { FaExclamationTriangle } from 'react-icons/fa';
-
 # 创建对话请求（Gemini）
 
 ## 概述
 OmniMaaS 的 Gemini 原生 Chat Completions 接口面向已经接入 Google Gemini 生态的团队，提供一条与官方接口格式高度一致的迁移路径。平台在协议层兼容 Gemini 官方 `models/{model}:streamGenerateContent / generateContent` 规范：请求体沿用 model、contents（多模态内容块）、tools、toolConfig 等字段设计，并支持流式响应与函数调用
 
-<FaExclamationTriangle style={{ color: '#facc15', fontSize: '1em' }} /> Gemini官方SDK 不支持base_url切换，只能使用REST API的方式调用OmniMaaS的Gemini接口。
+**注意**：Gemini 官方 SDK 不支持 base_url 切换，只能使用 REST API 的方式调用 OmniMaaS 的 Gemini 接口。
 
 ## 请求
 
-### 端点
-``` POST
-https://api.omnimaas.com/v1beta/{model=models/*}:generateContent
+### Endpoint
 ```
+POST https://api.omnimaas.com/v1beta/{model=models/*}:generateContent
+```
+
+### Headers
+
+| 参数名 | 类型 | 必填 | 说明 |
+|--------|------|------|------|
+| Authorization | string | 是 | Bearer Token，格式：`Bearer YOUR_API_KEY` |
+| Content-Type | string | 是 | 请求体格式，固定为 `application/json` |
 
 ### 路径参数
 
 通过REST方式调用Gemini原生API，需要将模型名称传入路径参数，以下为具体描述
 
-- **model** `string` (必填)  
+- **model** `string` (必填)
 用于生成补全的 Model 的名称，格式：`models/{model}`。
 
-### 请求体（Request Body）
+### Request Body
 
 - **contents** `object array` (必填)  
   与模型当前对话的内容，对于单轮查询，这是单个实例。对于多轮查询（例如聊天），这是包含对话历史记录和最新请求的重复字段。
@@ -162,7 +167,7 @@ https://api.omnimaas.com/v1beta/{model=models/*}:generateContent
 ### 请求示例
 
 ``` shell
-curl "https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=$GEMINI_API_KEY" \
+curl "https://api.omnimaas.com/v1beta/models/gemini-2.0-flash:generateContent?key=$GEMINI_API_KEY" \
     -H 'Content-Type: application/json' \
     -X POST \
     -d '{
@@ -172,7 +177,7 @@ curl "https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:g
        }' 2> /dev/null
 ```
 
-### 响应体 （Response Body）
+### Response Body
 
 - **candidates** `object array`  
   模型生成的候选回答列表。每个候选包含生成的内容、完成原因等信息。
@@ -345,3 +350,147 @@ curl "https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:g
 ```
 
  
+
+## 代码示例
+
+### Python 示例
+
+#### 使用Google SDK（推荐）
+
+```python
+import google.generativeai as genai
+
+genai.configure(
+    api_key='YOUR_API_KEY',
+    transport='rest',
+    client_options={'api_endpoint': 'https://api.omnimaas.com'}
+)
+
+model = genai.GenerativeModel('gemini-2.0-flash-exp')
+
+# 非流式调用
+response = model.generate_content('你好，请介绍一下你自己')
+print(response.text)
+```
+
+#### 流式调用
+
+```python
+import google.generativeai as genai
+
+genai.configure(
+    api_key='YOUR_API_KEY',
+    transport='rest',
+    client_options={'api_endpoint': 'https://api.omnimaas.com'}
+)
+
+model = genai.GenerativeModel('gemini-2.0-flash-exp')
+
+response = model.generate_content('讲个笑话', stream=True)
+for chunk in response:
+    print(chunk.text, end='', flush=True)
+```
+
+### Go 示例
+
+```go
+package main
+
+import (
+    "bytes"
+    "encoding/json"
+    "fmt"
+    "io"
+    "net/http"
+)
+
+type GeminiRequest struct {
+    Contents []Content `json:"contents"`
+}
+
+type Content struct {
+    Parts []Part `json:"parts"`
+}
+
+type Part struct {
+    Text string `json:"text"`
+}
+
+type GeminiResponse struct {
+    Candidates []struct {
+        Content struct {
+            Parts []Part `json:"parts"`
+        } `json:"content"`
+    } `json:"candidates"`
+}
+
+func main() {
+    reqBody := GeminiRequest{
+        Contents: []Content{
+            {Parts: []Part{{Text: "你好"}}},
+        },
+    }
+
+    jsonData, _ := json.Marshal(reqBody)
+    url := "https://api.omnimaas.com/v1beta/models/gemini-2.0-flash-exp:generateContent"
+    req, _ := http.NewRequest("POST", url, bytes.NewBuffer(jsonData))
+    req.Header.Set("Content-Type", "application/json")
+    req.Header.Set("x-goog-api-key", "YOUR_API_KEY")
+
+    client := &http.Client{}
+    resp, _ := client.Do(req)
+    defer resp.Body.Close()
+
+    body, _ := io.ReadAll(resp.Body)
+    var result GeminiResponse
+    json.Unmarshal(body, &result)
+    
+    fmt.Println(result.Candidates[0].Content.Parts[0].Text)
+}
+```
+
+### Node.js 示例
+
+#### 使用Google SDK（推荐）
+
+```javascript
+const { GoogleGenerativeAI } = require('@google/generative-ai');
+
+const genAI = new GoogleGenerativeAI('YOUR_API_KEY');
+
+// 非流式调用
+async function main() {
+    const model = genAI.getGenerativeModel({ 
+        model: 'gemini-2.0-flash-exp',
+        baseUrl: 'https://api.omnimaas.com'
+    });
+
+    const result = await model.generateContent('你好，请介绍一下你自己');
+    console.log(result.response.text());
+}
+
+main();
+```
+
+#### 流式调用
+
+```javascript
+const { GoogleGenerativeAI } = require('@google/generative-ai');
+
+const genAI = new GoogleGenerativeAI('YOUR_API_KEY');
+
+async function main() {
+    const model = genAI.getGenerativeModel({ 
+        model: 'gemini-2.0-flash-exp',
+        baseUrl: 'https://api.omnimaas.com'
+    });
+
+    const result = await model.generateContentStream('讲个笑话');
+    
+    for await (const chunk of result.stream) {
+        process.stdout.write(chunk.text());
+    }
+}
+
+main();
+```
